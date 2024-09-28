@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Pulse Server
+  version: 1.0.0
+servers:
+  - url: https://pulse.metrik.app
+paths:
+  /universe/registry/add:
+    post:
+      summary: Add a universe to the registry
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Add a universe by providing universeId and openCloudApiKey.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - universeId
+                - openCloudApiKey
+              properties:
+                universeId:
+                  type: string
+                  description: The unique identifier of the universe.
+                openCloudApiKey:
+                  type: string
+                  description: The Open Cloud API key for the universe.
+      responses:
+        '200':
+          description: Universe added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '409':
+          description: Universe already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid API Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /universe/registry/remove:
+    post:
+      summary: Remove a universe from the registry
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Remove a universe by providing universeId.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - universeId
+              properties:
+                universeId:
+                  type: string
+                  description: The unique identifier of the universe.
+      responses:
+        '200':
+          description: Universe removed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Universe does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid API Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /universe/registry/update:
+    post:
+      summary: Update a universe's Open Cloud API key
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Update a universe by providing universeId and new openCloudApiKey.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - universeId
+                - openCloudApiKey
+              properties:
+                universeId:
+                  type: string
+                  description: The unique identifier of the universe.
+                openCloudApiKey:
+                  type: string
+                  description: The new Open Cloud API key for the universe.
+      responses:
+        '200':
+          description: Universe updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Universe does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid API Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /universe/{universeId}/connect:
+    get:
+      summary: Connect to a universe via WebSocket
+      description: Establish a WebSocket connection to interact with a universe.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: universeId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the universe.
+        - in: header
+          name: Upgrade
+          required: true
+          schema:
+            type: string
+            enum: [websocket]
+          description: Must be set to "websocket".
+      responses:
+        '101':
+          description: Switching Protocols (WebSocket upgrade).
+        '404':
+          description: Universe does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '426':
+          description: Expected header Upgrade: websocket.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid API Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /universe/{universeId}/send:
+    post:
+      summary: Send a message to a universe
+      description: Send a message to either Roblox or server destinations within a universe.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: universeId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the universe.
+      requestBody:
+        description: Message details to be sent.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - universeId
+                - message
+                - topic
+                - destination
+              properties:
+                universeId:
+                  type: integer
+                  description: The universe ID; must match the universeId in the path.
+                message:
+                  type: object
+                  description: The message payload.
+                  additionalProperties: true
+                topic:
+                  type: string
+                  description: The topic of the message.
+                serverId:
+                  type: string
+                  description: (Optional) The server ID if targeting a specific server.
+                destination:
+                  type: string
+                  description: The destination of the message.
+                  enum: [roblox, server]
+      responses:
+        '200':
+          description: Message sent successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Invalid API Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success

@@ -1,0 +1,33 @@
+{
+  "name": "@metrik/pulse",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "type": "module",
+  "author": "Team Metrik <oss@metrik.app>",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --treeshake"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
