@@ -78,10 +78,23 @@ const pulse = new Pulse({
 
 const universe = pulse.Universe(2745313133);
 
+const { subscribe } = await universe.connect();
+
+subscribe("test", (message) => {
+    console.log(message);
+});
+
+await universe.send({
+    topic: "test",
+    message: "hello world",
+    serverId: "optional-server-id",
+    destination: "roblox" // default, can be "roblox" for server-server comms (why you would want this is beyond me)
+})
+
 ```
 ## UI
 
-Pulse comes with a UI that you can use to interact with the Game Registry.
+Pulse comes with a UI that you can use to interact with the Game Registry, as well as inspect stats about the operation of the server. It is available on the root path of your deployed Worker.
  
 ## Architecture
 

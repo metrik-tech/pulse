@@ -198,6 +198,8 @@ const universe = pulse.Universe(2745313133);
   const { subscribe } = await universe.connect();
   const { subscribe: subscribe2 } = await universe.connect();
 
+  await universe.send({});
+
   subscribe<{ balls: boolean }>("test", (data) => {
     console.log(data.balls);
   });
