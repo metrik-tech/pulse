@@ -9,8 +9,8 @@ Pulse is a tool built by Metrik to allow for incredibly efficient realtime WebSo
 
 1. Clone the repository (or download the zip file) and navigate to the `server` directory.
 2. Install the dependencies by running `pnpm install`.
-   > [!NOTE]
-   > If you don't have pnpm installed, read their docs at https://pnpm.io/installation
+> [!NOTE]
+> If you don't have pnpm installed, read their docs at https://pnpm.io/installation
 1. Create a new Cloudflare account if you do not already have one.
 2. Subscribe to the Workers Paid plan (this is required to deploy the server).
 3. Create a new KV namespace in Cloudflare using the command `pnpx wrangler kv:namespace create UNIVERSE_REGISTRY`. You may need to sign in on Cloudflare.
@@ -19,11 +19,11 @@ Pulse is a tool built by Metrik to allow for incredibly efficient realtime WebSo
 6. [Open the Worker's settings on Cloudflare (this link will take you right there)](https://dash.cloudflare.com/?to=/:account/workers/services/view/pulse-server/production/settings)
 7.  Press '+ Add' beside 'Variables and Secrets'
 8.  Enter `API_KEY` as the variable name and a randomly generated string as the variable. You can use https://generate-secret.vercel.app/64 to generate a sufficiently long string.
-    > [!CAUTION]  
-    > Do not forget this value! This is required to interact with the server, either through the UI or through the API/clients.
-9.  Press 'Encrypt' and then 'Deploy'.
-10. Repeat steps 5 through 7 for the `ENCRYPTION_KEY` variable. You do not need to note down this variable.
-11. You are now done! Press the 'Visit' button at the top of the page to open the UI, and this will be the hostname you use with the Roblox & Server clients.
+> [!CAUTION]  
+> Do not forget this value! This is required to interact with the server, either through the UI or through the API/clients.
+1.  Press 'Encrypt' and then 'Deploy'.
+2.  Repeat steps 5 through 7 for the `ENCRYPTION_KEY` variable. You do not need to note down this variable.
+3.  You are now done! Press the 'Visit' button at the top of the page to open the UI, and this will be the hostname you use with the Roblox & Server clients.
 
 ## Using the UI to add your universe to the registry
 
