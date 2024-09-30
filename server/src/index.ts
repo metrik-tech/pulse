@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { putEncryptedKV, getDecryptedKV } from "encrypt-workers-kv";
 import { publishMessage } from "./open-cloud";
 import { z } from "zod";
+import { parse, serialize } from "cookie";
 
 const TOPIC = "pulse";
 const ROUTES = {
@@ -18,17 +19,10 @@ type Session = {
 	cloudKey: string;
 };
 
-/** A Durable Object's behavior is defined in an exported Javascript class */
 export class SocketDurableObject extends DurableObject<Env> {
 	sessions: Map<WebSocket, Session>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
-		// This is reset whenever the constructor runs because
-		// regular WebSockets do not survive Durable Object resets.
-		//
-		// WebSockets accepted via the Hibernation API can survive
-		// a certain type of eviction, but we will not cover that here.
-
 		super(ctx, env);
 
 		this.sessions = new Map();
@@ -56,7 +50,7 @@ export class SocketDurableObject extends DurableObject<Env> {
 
 			const [universeId] = path.split("/").slice(2);
 
-			const openCloudKey = new TextDecoder().decode(await getDecryptedKV(this.env.GAME_REGISTRY, universeId, this.env.ENCRYPTION_KEY));
+			const openCloudKey = new TextDecoder().decode(await getDecryptedKV(this.env.UNIVERSE_REGISTRY, universeId, this.env.ENCRYPTION_KEY));
 
 			if (!openCloudKey) {
 				return Response.json({ error: "Universe does not exist" }, { status: 404 });
@@ -120,7 +114,7 @@ export class SocketDurableObject extends DurableObject<Env> {
 
 			if (body.destination === "roblox") {
 				await publishMessage({
-					cloudKey: new TextDecoder().decode(await getDecryptedKV(this.env.GAME_REGISTRY, universeId, this.env.ENCRYPTION_KEY)),
+					cloudKey: new TextDecoder().decode(await getDecryptedKV(this.env.UNIVERSE_REGISTRY, universeId, this.env.ENCRYPTION_KEY)),
 					universeId: Number(universeId),
 					topic: TOPIC,
 					message: {
@@ -225,6 +219,39 @@ export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const path = new URL(request.url).pathname;
 
+		if (path.startsWith("/ui")) {
+			if (path === "/ui/session" && request.method === "GET") {
+				const cookie = request.headers.get("Cookie");
+				const parsedCookie = parse(cookie ?? "");
+
+				return Response.json({ session: parsedCookie["pulse.session"] ? true : false });
+			}
+
+			if (path === "/ui/login" && request.method === "POST") {
+				const body = await request.json<{ apiKey: string }>();
+
+				if (!body.apiKey) {
+					return Response.json({ error: "Missing API Key" }, { status: 400 });
+				}
+
+				if (body.apiKey !== env.API_KEY) {
+					return Response.json({ error: "Invalid API Key" }, { status: 401 });
+				}
+
+				const session = serialize("pulse.session", body.apiKey, {
+					secure: true,
+					httpOnly: true,
+					expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 1 mo
+				});
+
+				return Response.json(null, {
+					headers: {
+						"Set-Cookie": session,
+					},
+				});
+			}
+		}
+
 		if (ROUTES.interact.test(path)) {
 			const [universeId] = path.split("/").slice(2);
 
@@ -239,15 +266,16 @@ export default {
 			});
 		}
 
-		const apiKeyHeader = request.headers.get("Authorization")?.split("Bearer ")[1];
+		const cookieHeader = request.headers.get("Cookie");
+		const cookie = cookieHeader ? parse(cookieHeader) : {};
 
-		if (apiKeyHeader !== env.API_KEY && path !== "/") {
+		if (cookie["pulse.session"] !== env.API_KEY) {
 			return Response.json({ error: "Invalid API Key" }, { status: 401 });
 		}
 
 		if (ROUTES.registryAdd.test(path) && request.method === "POST") {
 			const body = await request.json<{ universeId: number; openCloudApiKey: string }>();
-			if (await env.GAME_REGISTRY.get(String(body.universeId))) {
+			if (await env.UNIVERSE_REGISTRY.get(String(body.universeId))) {
 				return Response.json({ error: "Universe already exists" }, { status: 409 });
 			}
 
@@ -262,39 +290,41 @@ export default {
 				return Response.json({ error: "Invalid Open Cloud API Key" }, { status: 400 });
 			}
 
-			await putEncryptedKV(env.GAME_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
+			await putEncryptedKV(env.UNIVERSE_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
 
 			return Response.json({ success: true });
 		}
 
 		if (ROUTES.registryRemove.test(path) && request.method === "POST") {
 			const body = await request.json<{ universeId: number }>();
-			if (!(await env.GAME_REGISTRY.get(String(body.universeId)))) {
+			if (!(await env.UNIVERSE_REGISTRY.get(String(body.universeId)))) {
 				return Response.json({ error: "Universe does not exist" }, { status: 404 });
 			}
 
-			await env.GAME_REGISTRY.delete(String(body.universeId));
+			await env.UNIVERSE_REGISTRY.delete(String(body.universeId));
 
 			return Response.json({ success: true });
 		}
 
 		if (ROUTES.registryUpdate.test(path) && request.method === "POST") {
 			const body = await request.json<{ universeId: number; openCloudApiKey: string }>();
-			if (!(await env.GAME_REGISTRY.get(String(body.universeId)))) {
+			if (!(await env.UNIVERSE_REGISTRY.get(String(body.universeId)))) {
 				return Response.json({ error: "Universe does not exist" }, { status: 404 });
 			}
 
-			await putEncryptedKV(env.GAME_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
+			await putEncryptedKV(env.UNIVERSE_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
 
 			return Response.json({ success: true });
 		}
 
 		if (ROUTES.registryList.test(path) && request.method === "GET") {
-			const universeIds = (await env.GAME_REGISTRY.list()).keys.map((key) => Number(key.name));
+			const universeIds = (await env.UNIVERSE_REGISTRY.list()).keys.map((key) => Number(key.name));
 
 			const valid = await Promise.all(
 				universeIds.map(async (universeId) => {
-					const openCloudKey = new TextDecoder().decode(await getDecryptedKV(env.GAME_REGISTRY, String(universeId), env.ENCRYPTION_KEY));
+					const openCloudKey = new TextDecoder().decode(
+						await getDecryptedKV(env.UNIVERSE_REGISTRY, String(universeId), env.ENCRYPTION_KEY)
+					);
 
 					const { ok } = await publishMessage({
 						cloudKey: openCloudKey,
