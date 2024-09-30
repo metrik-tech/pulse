@@ -88,7 +88,7 @@ await universe.send({
     topic: "test",
     message: "hello world",
     serverId: "optional-server-id",
-    destination: "roblox" // default, can be "roblox" for server-server comms (why you would want this is beyond me)
+    destination: "roblox" // default, can be "server" for server-server comms (why you would want this is beyond me)
 })
 
 ```
