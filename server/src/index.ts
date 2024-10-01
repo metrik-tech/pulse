@@ -2,9 +2,9 @@ import { putEncryptedKV, getDecryptedKV } from "encrypt-workers-kv";
 import { publishMessage } from "./open-cloud";
 import { parse, serialize } from "cookie";
 
-export const TOPIC = "pulse";
 const ROUTES = {
-  interact: /^\/universe\/\d+\/[^\/]+$/,
+  interact: /^\/universe\/\d+\/(send|connect)$/,
+  clientCount: /^\/universe\/\d+\/clients$/,
   registryAdd: /^\/universe\/registry\/add$/,
   registryRemove: /^\/universe\/registry\/remove$/,
   registryUpdate: /^\/universe\/registry\/update$/,
@@ -39,7 +39,9 @@ export default {
         const session = serialize("pulse.session", body.apiKey, {
           secure: true,
           httpOnly: true,
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 1 mo
+          sameSite: "lax",
+          path: "/",
+          expires: new Date(new Date().setDate(new Date().getDate() + 7)), // 1 mo
         });
 
         return Response.json(null, {
@@ -69,6 +71,13 @@ export default {
 
     if (cookie["pulse.session"] !== env.API_KEY) {
       return Response.json({ error: "Invalid API Key" }, { status: 401 });
+    }
+
+    if (ROUTES.clientCount.test(path) && request.method === "GET") {
+      const universeId = Number(path.split("/").slice(2)[0]);
+      const clients = await env.UNIVERSE_REGISTRY.get(`${universeId}:clients`);
+
+      return Response.json({ clients: Number(clients) });
     }
 
     if (ROUTES.registryAdd.test(path) && request.method === "POST") {
@@ -123,6 +132,7 @@ export default {
           const openCloudKey = new TextDecoder().decode(
             await getDecryptedKV(env.UNIVERSE_REGISTRY, String(universeId), env.ENCRYPTION_KEY)
           );
+          const clientCount = await env.UNIVERSE_REGISTRY.get(`${universeId}:clients`);
 
           const { ok } = await publishMessage({
             cloudKey: openCloudKey,
@@ -134,14 +144,15 @@ export default {
           return {
             universeId,
             valid: ok,
+            clients: Number(clientCount ?? 0),
           };
         })
       );
 
       const asObject = valid.reduce((acc, curr) => {
-        acc[curr.universeId] = { valid: curr.valid };
+        acc[curr.universeId] = { valid: curr.valid, clients: curr.clients };
         return acc;
-      }, {} as Record<number, { valid: boolean }>);
+      }, {} as Record<number, { valid: boolean; clients: number }>);
 
       return Response.json(asObject);
     }

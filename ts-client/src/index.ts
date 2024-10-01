@@ -87,10 +87,12 @@ class Universe {
             error?: string;
           };
 
-          const dataSchema = z.object({
-            topic: z.string(),
-            message: z.any(),
-          });
+          const dataSchema = z
+            .object({
+              topic: z.string(),
+              message: z.any(),
+            })
+            .strict();
 
           const valid = dataSchema.safeParse(data);
 

@@ -2,6 +2,11 @@
 
 Pulse is a tool built by Metrik to allow for incredibly efficient realtime WebSocket communication between the web and Roblox. Pulse is built on top of Cloudflare Durable Objects and the Open Cloud MessagingService API.
 
+Pulse makes use of a number of techniques to make the server as efficient as possible, including:
+- Virtual MessagingService topics to avoid consuming too much usage
+- Hibernation of Durable Objects between messages to reduce cost
+- 
+
 > [!NOTE]  
 > A Cloudflare Workers 'Paid plan' account is required to use Pulse.
 

@@ -5,4 +5,5 @@ interface Env {
 	API_KEY: string;
 	ENCRYPTION_KEY: string;
 	SOCKET: DurableObjectNamespace<import("./src/index").SocketDurableObject>;
+	ANALYTICS_ENGINE: AnalyticsEngineDataset;
 }

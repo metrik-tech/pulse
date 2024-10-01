@@ -2,13 +2,26 @@ import { DurableObject } from "cloudflare:workers";
 import { getDecryptedKV } from "encrypt-workers-kv";
 import { z } from "zod";
 import { publishMessage } from "./open-cloud";
-import { TOPIC } from ".";
 
 type Session = {
   quit: boolean;
   universeId: number;
   cloudKey: string;
 };
+
+const TOPIC = "pulse";
+
+async function increment(universeId: number, env: Env) {
+  const clients = await env.UNIVERSE_REGISTRY.get(`${universeId}:clients`);
+
+  await env.UNIVERSE_REGISTRY.put(`${universeId}:clients`, String(Number(clients) + 1));
+}
+
+async function decrement(universeId: number, env: Env) {
+  const clients = await env.UNIVERSE_REGISTRY.get(`${universeId}:clients`);
+
+  await env.UNIVERSE_REGISTRY.put(`${universeId}:clients`, String(Number(clients) - 1));
+}
 
 export class SocketDurableObject extends DurableObject<Env> {
   sessions: Map<WebSocket, Session>;
@@ -18,10 +31,18 @@ export class SocketDurableObject extends DurableObject<Env> {
 
     this.sessions = new Map();
 
-    this.ctx.getWebSockets().forEach((webSocket) => {
+    const websockets = this.ctx.getWebSockets();
+
+    websockets.forEach(async (webSocket) => {
       let meta = webSocket.deserializeAttachment();
 
-      this.sessions.set(webSocket, meta);
+      const existsAlready = this.sessions.has(webSocket);
+
+      !existsAlready && this.sessions.set(webSocket, meta);
+
+      if (!existsAlready) {
+        await increment(meta.universeId, env);
+      }
     });
   }
 
@@ -68,6 +89,8 @@ export class SocketDurableObject extends DurableObject<Env> {
         quit: false,
       });
 
+      await increment(Number(universeId), this.env);
+
       return new Response(null, {
         status: 101,
         webSocket: pair[0],
@@ -81,12 +104,14 @@ export class SocketDurableObject extends DurableObject<Env> {
         return Response.json({ error: "Invalid API Key" }, { status: 401 });
       }
 
-      const bodySchema = z.object({
-        message: z.any(),
-        topic: z.string(),
-        serverId: z.string().optional(),
-        destination: z.union([z.literal("roblox"), z.literal("server")]),
-      });
+      const bodySchema = z
+        .object({
+          message: z.any(),
+          topic: z.string(),
+          serverId: z.string().optional(),
+          destination: z.union([z.literal("roblox"), z.literal("server")]),
+        })
+        .strict();
 
       const body = await request.json<{
         message: any;
@@ -118,7 +143,6 @@ export class SocketDurableObject extends DurableObject<Env> {
 
       if (body.destination === "server") {
         for (const [ws, session] of this.sessions) {
-          console.log(session.universeId);
           if (session.universeId === Number(universeId)) {
             ws.send(
               JSON.stringify({
@@ -149,11 +173,13 @@ export class SocketDurableObject extends DurableObject<Env> {
       return;
     }
 
-    const dataSchema = z.object({
-      topic: z.string(),
-      message: z.any(),
-      serverId: z.string().optional(),
-    });
+    const dataSchema = z
+      .object({
+        topic: z.string(),
+        message: z.any(),
+        serverId: z.string().optional(),
+      })
+      .strict();
 
     let data: {
       topic: string;
@@ -194,6 +220,7 @@ export class SocketDurableObject extends DurableObject<Env> {
     const session = this.sessions.get(ws) || ({} as Session);
     session.quit = true;
     this.sessions.delete(ws);
+    await decrement(session.universeId, this.env);
     ws.close(code, "Closing...");
   }
 
