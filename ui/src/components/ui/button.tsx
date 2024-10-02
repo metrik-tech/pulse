@@ -3,7 +3,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { RiLoader2Fill } from "@remixicon/react";
 import { tv, type VariantProps } from "tailwind-variants";
 
-import { cx, focusRing } from "../lib/utils";
+import { cx, focusRing } from "../../lib/utils";
 
 const buttonVariants = tv({
   base: [
@@ -30,16 +30,16 @@ const buttonVariants = tv({
       ],
       secondary: [
         // border
-        "border-gray-300 dark:border-gray-800",
+        "border-zinc-300 dark:border-zinc-800",
         // text color
-        "text-gray-900 dark:text-gray-50",
+        "text-zinc-900 dark:text-zinc-50",
         // background color
-        "bg-white dark:bg-gray-950",
+        "bg-white dark:bg-zinc-950",
         //hover color
-        "hover:bg-gray-50 dark:hover:bg-gray-900/60",
+        "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
         // disabled
-        "disabled:text-gray-400",
-        "disabled:dark:text-gray-600",
+        "disabled:text-zinc-400",
+        "disabled:dark:text-zinc-600",
       ],
       light: [
         // base
@@ -47,14 +47,14 @@ const buttonVariants = tv({
         // border
         "border-transparent",
         // text color
-        "text-gray-900 dark:text-gray-50",
+        "text-zinc-900 dark:text-zinc-50",
         // background color
-        "bg-gray-200 dark:bg-gray-900",
+        "bg-zinc-200 dark:bg-zinc-900",
         // hover color
-        "hover:bg-gray-300/70 dark:hover:bg-gray-800/80",
+        "hover:bg-zinc-300/70 dark:hover:bg-zinc-800/80",
         // disabled
-        "disabled:bg-gray-100 disabled:text-gray-400",
-        "disabled:dark:bg-gray-800 disabled:dark:text-gray-600",
+        "disabled:bg-zinc-100 disabled:text-zinc-400",
+        "disabled:dark:bg-zinc-800 disabled:dark:text-zinc-600",
       ],
       ghost: [
         // base
@@ -62,12 +62,12 @@ const buttonVariants = tv({
         // border
         "border-transparent",
         // text color
-        "text-gray-900 dark:text-gray-50",
+        "text-zinc-900 dark:text-zinc-50",
         // hover color
-        "bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80",
+        "bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/80",
         // disabled
-        "disabled:text-gray-400",
-        "disabled:dark:text-gray-600",
+        "disabled:text-zinc-400",
+        "disabled:dark:text-zinc-600",
       ],
       destructive: [
         // text color

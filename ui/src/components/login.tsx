@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Navbar } from "./navbar";
 import { toast } from "sonner";
-import { Button } from "./button";
-import { Input } from "./input";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export function Login({
   handleLogin,

@@ -1,5 +1,5 @@
 {
-  "name": "pulse-server",
+  "name": "@metrik/pulse-server",
   "version": "0.0.0",
   "private": true,
   "scripts": {

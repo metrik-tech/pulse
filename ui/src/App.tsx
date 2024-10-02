@@ -5,16 +5,28 @@ import { Navbar } from "./components/navbar";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeaderCell,
   TableRoot,
   TableRow,
-} from "./components/table";
+} from "./components/ui/table";
+import { Button } from "./components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog";
+import { Label } from "./components/ui/label";
+import { Input } from "./components/ui/input";
+import { toast } from "sonner";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
+import { RegistryTableRow } from "./components/registry-table-row";
 
-const API_URL = "/universe/registry"; // Base API URL
+export const API_URL = "/universe/registry"; // Base API URL
 
-interface Universe {
+export interface Universe {
   valid: boolean;
   clients: number;
 }
@@ -26,6 +38,7 @@ interface Universes {
 const PulseRegistryManager: React.FC = () => {
   const [newUniverseId, setNewUniverseId] = useState<string>("");
   const [newApiKey, setNewApiKey] = useState<string>("");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -111,69 +124,35 @@ const PulseRegistryManager: React.FC = () => {
     },
   });
 
-  const { mutate: updateUniverse } = useMutation({
-    mutationFn: async ({
-      universeId,
-      openCloudApiKey,
-    }: {
-      universeId: string;
-      openCloudApiKey: string;
-    }) => {
-      const response = await fetch(`${API_URL}/update`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ universeId, openCloudApiKey }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to update universe");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["universes"] });
-    },
-  });
-
-  const deleteUniverseMutation = useMutation({
-    mutationFn: async (universeId: string) => {
-      const response = await fetch(`${API_URL}/remove`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ universeId }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to delete universe");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["universes"] });
-    },
-  });
-
   const handleAddUniverse = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    try {
-      await addUniverseMutation.mutateAsync({
+
+    setAddDialogOpen(false);
+
+    toast.promise(
+      addUniverseMutation.mutateAsync({
         universeId: newUniverseId,
         openCloudApiKey: newApiKey,
-      });
-      alert("Universe added successfully");
-      setNewUniverseId("");
-      setNewApiKey("");
-    } catch (error) {
-      console.error("Error adding universe:", error);
-      alert("Failed to add universe");
-    }
+      }),
+      {
+        loading: "Adding universe...",
+        success: "Universe added successfully",
+        error: "Failed to add universe",
+      }
+    );
+
+    setNewUniverseId("");
+    setNewApiKey("");
   };
 
-  if (!isLoggedIn || isLoggingIn) {
+  if (isLoading || isLoggingIn)
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+
+  if (!isLoggedIn) {
     return (
       <Login
         handleLogin={loginMutation.mutateAsync}
@@ -182,18 +161,62 @@ const PulseRegistryManager: React.FC = () => {
     );
   }
 
-  if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error fetching universes</div>;
 
   return (
     <>
       <Navbar loggedIn={true} />
-      <div>
+      <div className="mt-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-medium mb-1">Universe Registry</h2>
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Add Universe</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Universe to Registry</DialogTitle>
+              </DialogHeader>
+
+              <form
+                onSubmit={handleAddUniverse}
+                className="*:space-y-1 *:w-full flex flex-col justify-start items-start gap-y-2"
+              >
+                <div className="mt-2">
+                  <Label htmlFor="#universe-id-input">Universe ID</Label>
+                  <Input
+                    id="universe-id-input"
+                    placeholder="Universe ID"
+                    required
+                    type="number"
+                    enableStepper={false}
+                    onChange={(e) => {
+                      setNewUniverseId(e.target.value);
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="#api-key-input">Open Cloud API Key</Label>
+                  <Input
+                    id="api-key-input"
+                    placeholder="Open Cloud API Key"
+                    required
+                    type="password"
+                    onChange={(e) => {
+                      setNewApiKey(e.target.value);
+                    }}
+                  />
+                </div>
+
+                {/* <DialogClose asChild className="mt-3"> */}
+                <Button type="submit">Add Universe</Button>
+                {/* </DialogClose> */}
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <TableRoot>
+        <TableRoot className="mt-4">
           <Table>
             <TableHead>
               <TableRow>
@@ -207,110 +230,18 @@ const PulseRegistryManager: React.FC = () => {
             </TableHead>
             <TableBody>
               {Object.entries(universes || {}).map(([universeId, data]) => (
-                <TableRow key={universeId}>
-                  <TableCell>{universeId}</TableCell>
-                  <TableCell>{!data.valid ? "Inactive" : "Active"}</TableCell>
-                  <TableCell>{data.clients}</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>{/* update, delete */}</TableCell>
-                </TableRow>
+                <RegistryTableRow
+                  universeId={universeId}
+                  data={data}
+                  key={universeId}
+                />
               ))}
             </TableBody>
           </Table>
         </TableRoot>
-
-        <div>
-          <h2>Add Universe</h2>
-          <form onSubmit={handleAddUniverse}>
-            <input
-              type="number"
-              value={newUniverseId}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewUniverseId(e.target.value)
-              }
-              placeholder="Universe ID"
-              required
-            />
-            <input
-              type="text"
-              value={newApiKey}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewApiKey(e.target.value)
-              }
-              placeholder="Open Cloud API Key"
-              required
-            />
-            <button type="submit">Add Universe</button>
-          </form>
-        </div>
-
-        <div>
-          <h2>Universe List</h2>
-          <div>
-            {Object.entries(universes || {}).map(([universeId, data]) => (
-              <div key={universeId}>
-                <div>
-                  <input type="number" value={universeId} disabled />
-                  {!data.valid ? (
-                    <div>Open Cloud API Key is inactive. Please edit!</div>
-                  ) : (
-                    <span>Open Cloud API Key is active</span>
-                  )}
-                </div>
-                <div>
-                  <UpdateRegistryForm
-                    updateUniverse={updateUniverse}
-                    universeId={universeId}
-                  />
-
-                  <button
-                    onClick={() => deleteUniverseMutation.mutate(universeId)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </>
   );
 };
 
 export default PulseRegistryManager;
-function UpdateRegistryForm({
-  updateUniverse,
-  universeId,
-}: {
-  updateUniverse: ({
-    universeId,
-    openCloudApiKey,
-  }: {
-    universeId: string;
-    openCloudApiKey: string;
-  }) => void;
-  universeId: string;
-}) {
-  const [newApiKey, setNewApiKey] = useState<string>("");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateUniverse({
-          universeId,
-          openCloudApiKey: newApiKey,
-        });
-      }}
-    >
-      <input
-        type="text"
-        placeholder="Update Open Cloud API Key"
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setNewApiKey(e.target.value)
-        }
-      />
-      <button type="submit">Update</button>
-    </form>
-  );
-}

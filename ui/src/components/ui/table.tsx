@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { cx } from "../lib/utils";
+import { cx } from "../../lib/utils";
 
 const TableRoot = React.forwardRef<
   HTMLDivElement,
@@ -29,18 +29,14 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.TableHTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, forwardedRef) => (
-  <table
-    ref={forwardedRef}
-    tremor-id="tremor-raw"
-    className={cx(
-      // base
-      "w-full caption-bottom border-b",
-      // border color
-      "border-zinc-200 dark:border-zinc-800",
-      className
-    )}
-    {...props}
-  />
+  <div className={cx("border border-zinc-800 rounded-lg", className)}>
+    <table
+      ref={forwardedRef}
+      tremor-id="tremor-raw"
+      className={cx("w-full caption-bottom ")}
+      {...props}
+    />
+  </div>
 ));
 
 Table.displayName = "Table";
@@ -62,7 +58,7 @@ const TableHeaderCell = React.forwardRef<
     ref={forwardedRef}
     className={cx(
       // base
-      "border-b px-4 py-3.5 text-left text-sm font-semibold",
+      "border-b px-2 py-3 text-left text-sm font-semibold",
       // text color
       "text-zinc-900 dark:text-zinc-50",
       // border color
@@ -119,7 +115,7 @@ const TableCell = React.forwardRef<
     ref={forwardedRef}
     className={cx(
       // base
-      "p-4 text-sm",
+      "p-2 text-sm",
       // text color
       "text-zinc-600 dark:text-zinc-400",
       className
