@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTrigger,
   DialogTitle,
+  DialogDescription,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -144,9 +145,10 @@ export function RegistryTableRow({
             <DialogHeader>
               <DialogTitle>Delete Universe</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-zinc-500">
+            <DialogDescription>
               Are you sure you want to delete this universe?
-            </p>
+            </DialogDescription>
+
             <DialogClose asChild className="mt-3">
               <Button
                 type="submit"

@@ -209,7 +209,9 @@ const PulseRegistryManager: React.FC = () => {
                 </div>
 
                 {/* <DialogClose asChild className="mt-3"> */}
-                <Button type="submit">Add Universe</Button>
+                <Button type="submit" className="mt-3">
+                  Add Universe
+                </Button>
                 {/* </DialogClose> */}
               </form>
             </DialogContent>
