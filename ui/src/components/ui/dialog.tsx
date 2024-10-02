@@ -111,7 +111,7 @@ const DialogDescription = React.forwardRef<
   return (
     <DialogPrimitives.Description
       ref={forwardedRef}
-      className={cx("text-zinc-500 dark:text-zinc-500", className)}
+      className={cx("text-zinc-300", className)}
       {...props}
     />
   );

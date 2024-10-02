@@ -18,10 +18,10 @@ const Label = React.forwardRef<
       // base
       "text-sm leading-none",
       // text color
-      "text-zinc-900 dark:text-zinc-50",
+      " text-zinc-200",
       // disabled
       {
-        "text-zinc-400 dark:text-zinc-600": disabled,
+        "text-zinc-600": disabled,
       },
       className
     )}
