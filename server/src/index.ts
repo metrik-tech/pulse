@@ -125,7 +125,9 @@ export default {
     }
 
     if (ROUTES.registryList.test(path) && request.method === "GET") {
-      const universeIds = (await env.UNIVERSE_REGISTRY.list()).keys.map((key) => Number(key.name));
+      const universeIds = (await env.UNIVERSE_REGISTRY.list()).keys
+        .map((key) => (!key.name.includes(":") ? Number(key.name) : null))
+        .filter(Boolean);
 
       const valid = await Promise.all(
         universeIds.map(async (universeId) => {
@@ -136,7 +138,7 @@ export default {
 
           const { ok } = await publishMessage({
             cloudKey: openCloudKey,
-            universeId: universeId,
+            universeId: universeId as number,
             topic: "pulse_test",
             message: "test",
           });
@@ -150,7 +152,7 @@ export default {
       );
 
       const asObject = valid.reduce((acc, curr) => {
-        acc[curr.universeId] = { valid: curr.valid, clients: curr.clients };
+        acc[curr.universeId as number] = { valid: curr.valid, clients: curr.clients };
         return acc;
       }, {} as Record<number, { valid: boolean; clients: number }>);
 

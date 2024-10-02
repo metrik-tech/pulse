@@ -34,8 +34,7 @@ export class SocketDurableObject extends DurableObject<Env> {
     const websockets = this.ctx.getWebSockets();
 
     websockets.forEach(async (webSocket) => {
-      let meta = webSocket.deserializeAttachment();
-
+      const meta = webSocket.deserializeAttachment();
       const existsAlready = this.sessions.has(webSocket);
 
       !existsAlready && this.sessions.set(webSocket, meta);
@@ -174,6 +173,9 @@ export class SocketDurableObject extends DurableObject<Env> {
 
     if (!session || session?.quit) {
       ws.close(1011, "WebSocket broken");
+      if (session) {
+        await decrement(session.universeId, this.env);
+      }
       return;
     }
 
