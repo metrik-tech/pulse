@@ -98,6 +98,7 @@ export class SocketDurableObject extends DurableObject<Env> {
     }
 
     if (path.endsWith("/send")) {
+      const [universeId] = path.split("/").slice(2);
       const apiKeyHeader = request.headers.get("Authorization")?.split("Bearer ")[1];
 
       if (apiKeyHeader !== this.env.API_KEY) {
@@ -126,7 +127,10 @@ export class SocketDurableObject extends DurableObject<Env> {
         return Response.json({ error: result.error.issues[0].message }, { status: 400 });
       }
 
-      const [universeId] = path.split("/").slice(2);
+      this.env.ANALYTICS_ENGINE.writeDataPoint({
+        blobs: [body.topic, body.destination, JSON.stringify(body.message), body.serverId ?? "null"],
+        indexes: [universeId],
+      });
 
       if (body.destination === "roblox") {
         await publishMessage({
