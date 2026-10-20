@@ -27,7 +27,7 @@ Pulse makes use of a number of techniques to make the server as efficient as pos
 > [!CAUTION]  
 > Do not forget this value! This is required to interact with the server, either through the UI or through the API/clients.
 11.  Press 'Encrypt' and then 'Deploy'.
-12.  Repeat steps 5 through 7 for the `ENCRYPTION_KEY` variable. You do not need to note down this variable.
+12.  Repeat steps 9 through 12 for the `ENCRYPTION_KEY` variable. You do not need to note down this variable.
 13.  You are now done! Press the 'Visit' button at the top of the page to open the UI, and this will be the hostname you use with the Roblox & Server clients.
 
 ## Using the UI to add your universe to the registry
@@ -56,7 +56,7 @@ local PulseClient = require(location.of.pulse.client)
 
 local pulse = PulseClient.new({
     serverUrl = "https://your-pulse-server",
-    apiKey = "your-api-key",
+    apiKey = "REDACTED",
 })
 
 pulse.Subscribe("test", function(message)
@@ -78,7 +78,7 @@ import { Pulse } from "@metrik/pulse";
 
 const pulse = new Pulse({
     serverUrl: "https://your-pulse-server",
-    apiKey: "your-api-key",
+    apiKey: "REDACTED",
 });
 
 const universe = pulse.Universe(2745313133);

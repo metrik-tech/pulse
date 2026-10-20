@@ -5,6 +5,7 @@ import { parse, serialize } from "cookie";
 const ROUTES = {
   interact: /^\/universe\/\d+\/(send|connect)$/,
   clientCount: /^\/universe\/\d+\/clients$/,
+  analytics: /^\/analytics$/,
   registryAdd: /^\/universe\/registry\/add$/,
   registryRemove: /^\/universe\/registry\/remove$/,
   registryUpdate: /^\/universe\/registry\/update$/,
@@ -13,8 +14,21 @@ const ROUTES = {
 
 export { SocketDurableObject } from "./durable-object";
 
+const devCors = {
+  "Access-Control-Allow-Origin": "http://localhost:5173",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true",
+};
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
+    if (env.DEV === "1" && request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: devCors,
+      });
+    }
+
     const path = new URL(request.url).pathname;
 
     if (path.startsWith("/ui")) {
@@ -22,18 +36,23 @@ export default {
         const cookie = request.headers.get("Cookie");
         const parsedCookie = parse(cookie ?? "");
 
-        return Response.json({ session: parsedCookie["pulse.session"] ? true : false });
+        return Response.json(
+          { session: parsedCookie["pulse.session"] ? true : false },
+          {
+            headers: env.DEV === "1" ? devCors : undefined,
+          }
+        );
       }
 
       if (path === "/ui/login" && request.method === "POST") {
         const body = await request.json<{ apiKey: string }>();
 
         if (!body.apiKey) {
-          return Response.json({ error: "Missing API Key" }, { status: 400 });
+          return Response.json({ error: "Missing API Key" }, { status: 400, headers: env.DEV === "1" ? devCors : undefined });
         }
 
         if (body.apiKey !== env.API_KEY) {
-          return Response.json({ error: "Invalid API Key" }, { status: 401 });
+          return Response.json({ error: "Invalid API Key" }, { status: 401, headers: env.DEV === "1" ? devCors : undefined });
         }
 
         const session = serialize("pulse.session", body.apiKey, {
@@ -47,6 +66,7 @@ export default {
         return Response.json(null, {
           headers: {
             "Set-Cookie": session,
+            ...(env.DEV === "1" ? devCors : {}),
           },
         });
       }
@@ -73,11 +93,48 @@ export default {
       return Response.json({ error: "Invalid API Key" }, { status: 401 });
     }
 
+    if (ROUTES.analytics.test(path) && request.method === "POST") {
+      const body = await request.json<{ timeframe: [string, string] }>();
+      const universeIds = (await env.UNIVERSE_REGISTRY.list()).keys
+        .map((key) => (!key.name.includes(":") ? Number(key.name) : null))
+        .filter(Boolean);
+
+      const analytics = await Promise.all(
+        universeIds.map(async (universeId) => {
+          const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/analytics_engine/sql`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${env.CF_API_KEY}`,
+            },
+            body: `SELECT toStartOfInterval(timestamp, INTERVAL '1' SECOND) AS second, count(*) AS messages_per_second FROM PULSE_MESSAGES WHERE timestamp BETWEEN toDateTime('${body.timeframe[0]}') AND toDateTime(addHours(toDateTime('${body.timeframe[0]}'), 1)) AND index1 = '${universeId}' GROUP BY second ORDER BY second`,
+          });
+
+          console.log(await res.clone().text());
+
+          return await res.json();
+        })
+      );
+
+      console.log(analytics);
+
+      return Response.json(
+        { analytics: true },
+        {
+          headers: env.DEV === "1" ? devCors : undefined,
+        }
+      );
+    }
+
     if (ROUTES.clientCount.test(path) && request.method === "GET") {
       const universeId = Number(path.split("/").slice(2)[0]);
       const clients = await env.UNIVERSE_REGISTRY.get(`${universeId}:clients`);
 
-      return Response.json({ clients: Number(clients) });
+      return Response.json(
+        { clients: Number(clients) },
+        {
+          headers: env.DEV === "1" ? devCors : undefined,
+        }
+      );
     }
 
     if (ROUTES.registryAdd.test(path) && request.method === "POST") {
@@ -99,7 +156,12 @@ export default {
 
       await putEncryptedKV(env.UNIVERSE_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
 
-      return Response.json({ success: true });
+      return Response.json(
+        { success: true },
+        {
+          headers: env.DEV === "1" ? devCors : undefined,
+        }
+      );
     }
 
     if (ROUTES.registryRemove.test(path) && request.method === "POST") {
@@ -110,7 +172,12 @@ export default {
 
       await env.UNIVERSE_REGISTRY.delete(String(body.universeId));
 
-      return Response.json({ success: true });
+      return Response.json(
+        { success: true },
+        {
+          headers: env.DEV === "1" ? devCors : undefined,
+        }
+      );
     }
 
     if (ROUTES.registryUpdate.test(path) && request.method === "POST") {
@@ -121,7 +188,12 @@ export default {
 
       await putEncryptedKV(env.UNIVERSE_REGISTRY, String(body.universeId), body.openCloudApiKey, env.ENCRYPTION_KEY);
 
-      return Response.json({ success: true });
+      return Response.json(
+        { success: true },
+        {
+          headers: env.DEV === "1" ? devCors : undefined,
+        }
+      );
     }
 
     if (ROUTES.registryList.test(path) && request.method === "GET") {
@@ -156,7 +228,9 @@ export default {
         return acc;
       }, {} as Record<number, { valid: boolean; clients: number }>);
 
-      return Response.json(asObject);
+      return Response.json(asObject, {
+        headers: env.DEV === "1" ? devCors : undefined,
+      });
     }
 
     return Response.json({ error: "Invalid path" }, { status: 404 });

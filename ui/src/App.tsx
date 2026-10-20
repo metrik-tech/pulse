@@ -24,7 +24,15 @@ import { toast } from "sonner";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 import { RegistryTableRow } from "./components/registry-table-row";
 
+const getUTCTimestamp = (date: Date) => {
+  const utcDate = date.toISOString().split("T");
+
+  return `${utcDate[0]} ${utcDate[1].split(".")[0]}`;
+};
+
 export const API_URL = "/universe/registry"; // Base API URL
+const BASE_URL = (url: string) =>
+  new URL(url).port === "5173" ? "http://localhost:8787" : url;
 
 export interface Universe {
   valid: boolean;
@@ -42,6 +50,8 @@ const PulseRegistryManager: React.FC = () => {
 
   const queryClient = useQueryClient();
 
+  const baseUrl = BASE_URL(document.location.origin);
+
   const {
     data: isLoggedIn,
     refetch: refetchSession,
@@ -49,7 +59,7 @@ const PulseRegistryManager: React.FC = () => {
   } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
-      const response = await fetch("/ui/session", {
+      const response = await fetch(baseUrl + "/ui/session", {
         method: "GET",
         credentials: "include",
       });
@@ -66,7 +76,7 @@ const PulseRegistryManager: React.FC = () => {
   } = useQuery<Universes>({
     queryKey: ["universes"],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/list`, {
+      const response = await fetch(baseUrl + `${API_URL}/list`, {
         method: "GET",
         credentials: "include",
       });
@@ -78,9 +88,31 @@ const PulseRegistryManager: React.FC = () => {
     enabled: !!isLoggedIn,
   });
 
+  useQuery({
+    queryKey: ["universes", "analytics"],
+    enabled: !!isLoggedIn && !isLoading,
+    queryFn: async () => {
+      const response = await fetch(baseUrl + "/analytics", {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({
+          timeframe: [
+            getUTCTimestamp(
+              new Date(new Date().setDate(new Date().getDate() - 1))
+            ),
+            getUTCTimestamp(new Date()),
+          ],
+        }),
+      });
+      const data = await response.json();
+      console.log(data);
+      return data.analytics;
+    },
+  });
+
   const loginMutation = useMutation({
     mutationFn: async (apiKey: string) => {
-      const response = await fetch("/ui/login", {
+      const response = await fetch(baseUrl + "/ui/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +138,7 @@ const PulseRegistryManager: React.FC = () => {
       universeId: string;
       openCloudApiKey: string;
     }) => {
-      const response = await fetch(`${API_URL}/add`, {
+      const response = await fetch(baseUrl + `${API_URL}/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

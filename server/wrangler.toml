@@ -5,6 +5,8 @@ compatibility_date = "2024-09-25"
 
 assets = { directory = "../ui/dist" }
 
+vars = { DEV = 0 }
+
 [[kv_namespaces]]
 binding = "UNIVERSE_REGISTRY"
 id = "9cb73170e1074f959328a86829caaaf2"

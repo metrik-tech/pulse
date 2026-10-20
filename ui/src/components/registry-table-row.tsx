@@ -87,7 +87,7 @@ export function RegistryTableRow({
       <TableCell className="flex items-center justify-start gap-x-1.5">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="ghost" className="outline-none">
+            <Button variant="ghost" className="outline-none -translate-x-3">
               Update API Key
             </Button>
           </DialogTrigger>

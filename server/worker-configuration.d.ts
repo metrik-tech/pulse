@@ -4,6 +4,9 @@ interface Env {
 	UNIVERSE_REGISTRY: KVNamespace;
 	API_KEY: string;
 	ENCRYPTION_KEY: string;
+	ACCOUNT_ID: string;
+	CF_API_KEY: string;
+	DEV: string;
 	SOCKET: DurableObjectNamespace<import("./src/index").SocketDurableObject>;
 	ANALYTICS_ENGINE: AnalyticsEngineDataset;
 }
